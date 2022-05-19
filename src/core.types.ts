@@ -50,6 +50,7 @@ export declare const Type: FunctionConstructor;
 
 export interface Type<T> extends Function {
     new(...args: any[]): T;
+    [key : string] : any
 }
 
 export interface parsedUrl {
@@ -57,4 +58,14 @@ export interface parsedUrl {
     params: Object,
     path_raw: string,
     path: string[],
+}
+
+export type bindPackType = {
+    [guid: string]: {
+        descriptor?: PropertyDescriptor,
+        actions: {
+            [key: string]: Function
+        },
+        forceValue?: string
+    }
 }

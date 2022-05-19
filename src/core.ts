@@ -1,5 +1,6 @@
 import { autoInjectable, container, inject, injectable } from "tsyringe";
 import { AppService } from "./app.service";
+import { BindingEngine } from "./core.engine";
 import { parsedUrl, Route, Type, uwuControlConfig, uwuControllerType, uwuDeclaration, uwuModuleConfig, uwuModuleType, uwuRouterType, uwuRoutesConfig } from "./core.types";
 import { parseQuery } from "./funcs";
 
@@ -27,7 +28,7 @@ class uwuModuleManager {
 }
 
 class uwuRouteManager {
-    public getControllerByUrl(): uwuControllerType {
+    public getModuleControllerByUrl(): [uwuModuleType, uwuControllerType] {
         const parsedUrl = this.processUrl();
         return this.getComponentToRenderByParsedUrl(parsedUrl);
     }
@@ -42,8 +43,8 @@ class uwuRouteManager {
         };
     }
 
-    private getComponentToRenderByParsedUrl(parsedUrl: parsedUrl): uwuControllerType {
-        let currentModule : Type<any> | null = window.root;
+    private getComponentToRenderByParsedUrl(parsedUrl: parsedUrl): [uwuModuleType, uwuControllerType] {
+        let currentModule: Type<any> | null = window.root;
         let currentPath = parsedUrl.path.length > 0 ? parsedUrl.path : [''];
         while (currentModule != null) {
             const router = this.getRouterByModule(currentModule);
@@ -70,7 +71,7 @@ class uwuRouteManager {
                 }
                 const target = found_section.target;
                 if (declarationCheck(target.prototype.type, uwuDeclaration.Controller)) {
-                    return target;
+                    return [currentModule, target];
                 } else if (declarationCheck(target.prototype.type, uwuDeclaration.Module)) {
                     currentPath.shift();
                     currentModule = target as Type<any>;
@@ -96,22 +97,26 @@ class uwuRouteManager {
     }
 }
 
-class uwuControllerManager {
-    public processPageByController(controller: uwuControllerType) {
-        const content : string = this.getTemplateContent(controller.prototype.template);
-        const parsedHTML = this.parseHTMLContent(content);
-        const rootNode = parsedHTML.querySelector("body");
-        console.log('parsedHTML', rootNode?.childNodes);
+export class uwuControllerManager {
+
+    // This should return instance of controller and binded to it nodes
+    public processPageByController(controller: uwuControllerType): [uwuControllerType, HTMLElement] {
+        const content: string = this.getTemplateContent(controller.prototype.template);
+        // const parsedHTML = this.parseHTMLContent(content).querySelector("body")?.innerHTML ?? "";
+        const rootNode = document.createElement(controller.prototype.selector) as HTMLElement;
+        rootNode.insertAdjacentHTML("afterbegin", content);
+        const controllerInstance = new controller();
+        return [controllerInstance, rootNode];
     }
 
-    private getTemplateContent(template : string) : string {
+    private getTemplateContent(template: string): string {
         // if (fs.existsSync(template)) {
         //     return fs.readFileSync(template, {encoding:'utf8', flag:'r'}).toString();
         // }
         return template;
     }
 
-    private parseHTMLContent(content : string) : Document {
+    private parseHTMLContent(content: string): Document {
         const parser = new DOMParser();
         const htmlDoc = parser.parseFromString(content, 'text/html');
         return htmlDoc;
@@ -128,10 +133,10 @@ export function uwuModule(config: uwuModuleConfig): Function {
         moduleClass.prototype.type = uwuDeclaration.Module;
         moduleClass.prototype.imports = config.imports;
         moduleClass.prototype.exports = config.exports;
-        console.log('managing', moduleClass.name);
+        // console.log('managing', moduleClass.name);
         for (const obj of config.imports) {
             const name = `${moduleClass.name}.${obj.name}`;
-            console.log('trying to import', obj);
+            // console.log('trying to import', obj);
             switch (obj.prototype.type as uwuDeclaration) {
                 case uwuDeclaration.Router:
                     break;
@@ -140,7 +145,7 @@ export function uwuModule(config: uwuModuleConfig): Function {
                     if (!container.isRegistered(obj)) {
                         container.register(name, { useValue: new obj() });
                     }
-                    console.log(obj, 'stored with name', name);
+                    // console.log(obj, 'stored with name', name);
                     break;
                 default:
                     throw new Error("Object must be uwu type (uwuModule, uwuService etc.)");
@@ -148,7 +153,7 @@ export function uwuModule(config: uwuModuleConfig): Function {
         }
         for (const obj of config.exports) {
             obj.prototype.parent = moduleClass;
-            console.log('trying to export', obj);
+            // console.log('trying to export', obj);
             // switch (obj.prototype.type as uwuDeclaration) {
             //     case uwuDeclaration.Controller:
             //         const name = `${moduleClass.name}.${obj.name}`;
@@ -169,19 +174,31 @@ export function uwuModule(config: uwuModuleConfig): Function {
 }
 
 export function uwuController(config: uwuControlConfig): Function {
-    console.log('uwuController', config.selector);
+    // console.log('uwuController', config.selector);
     return (objectClass: Function) => {
-        console.log('uwuController return function');
+        // console.log('uwuController return function');
         objectClass.prototype.type = uwuDeclaration.Controller;
         objectClass.prototype.selector = config.selector;
         objectClass.prototype.template = config.template;
+        objectClass.prototype.bindPack = {};
     };
 }
 
+
+export function Input() {
+    return function (target: Object, propertyKey: PropertyKey) {
+        let value: string;
+        Object.defineProperty(target, propertyKey, {
+            get: () => value,
+            set: (newVal: string) => value = newVal
+        });
+    }
+}
+
 export function uwuRouter(config: uwuRoutesConfig): Function {
-    console.log('uwuRouter');
+    // console.log('uwuRouter');
     return (objectClass: Function) => {
-        console.log('uwuRouter return function');
+        // console.log('uwuRouter return function');
         objectClass.prototype.type = uwuDeclaration.Router;
         objectClass.prototype.routes = config.routes;
     };
@@ -202,6 +219,15 @@ declare global {
     interface Window { root: Type<any>; }
 }
 
+function setEntryPoint(target: HTMLElement | null, controllerInstance: uwuControllerType, controllerNodes: NodeListOf<ChildNode>) {
+    const entryPoint = document.createElement(controllerInstance.selector);
+    controllerNodes.forEach(node => entryPoint.appendChild(node));
+    if (target == null) {
+        throw new Error("Can't find body in global template");
+    }
+    target.appendChild(entryPoint);
+}
+
 export function bootstrap<T>(module: Type<T>) {
     if (!Object.values(uwuDeclaration).includes(module.prototype.type as uwuDeclaration)) {
         throw new Error("Object must be uwu type (uwuModule, uwuController, uwuService etc.\)")
@@ -212,9 +238,12 @@ export function bootstrap<T>(module: Type<T>) {
     window.root = module;
     window.onload = e => {
         const routeManager: uwuRouteManager = new uwuRouteManager();
-        const controller = routeManager.getControllerByUrl();
+        const [module, controller] = routeManager.getModuleControllerByUrl();
         const controllerManager: uwuControllerManager = new uwuControllerManager();
-        controllerManager.processPageByController(controller);
+        let [controllerInstance, parentNode] = controllerManager.processPageByController(controller);
+        const bindingEngine: BindingEngine = new BindingEngine(controllerInstance);
+        [controllerInstance, parentNode] = bindingEngine.getControllerBindedToNodes(controllerInstance, parentNode);
+        document.querySelector("body")?.appendChild(parentNode);
     };
     // window.onpopstate = e => {
 

@@ -1,15 +1,18 @@
-import { uwuController } from "../core";
+import { Input, uwuController } from "../core";
 
-uwuController({
+@uwuController({
     selector: 'auth',
-    styles: ['./auth.component.scss'],
+    styles: [],
     template: `
-    <div>
-        <a>Some link</a>
-        <comp></comp>
-    </div>
+        <span [innerHTML]="this.some_field_in">Test</span>
+        <custom-button [title]="this.some_field_in"></custom-button>
     `,
 })
 export class AuthController {
+    constructor() {
+        
+    }
 
+    @Input()
+    some_field_in = '1';
 }

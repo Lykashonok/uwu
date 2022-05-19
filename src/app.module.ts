@@ -2,12 +2,12 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthController } from './auth/auth.component';
 import { uwuModule, uwuRouter } from './core';
+import { CustomButtonController } from './custom-button/custom-button.component';
 
 @uwuRouter({
     routes : [
         {path: '', target: AppController},
-        {path: '/', target: AppController},
-        {path: 'auth', target: AuthController, },
+        {path: 'auth', target: AuthController},
     ]
 })
 class AppRouter {}
@@ -19,7 +19,8 @@ class AppRouter {}
     ],
     exports: [
         AppController,
-        AuthController
+        AuthController,
+        CustomButtonController,
     ],
 })
 export class AppModule {}
