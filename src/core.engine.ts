@@ -18,6 +18,28 @@ enum BindingValue {
     FUNCTION,
 }
 
+/**
+ * @interface CustomVariable uwuFor="const a of this.some_array"
+ */
+interface CustomVariable {
+    /**
+     * @param elementName text representation 'a'
+     */
+    elementName: string,
+    /**
+     * @param element as object as element of this.some_array
+     */
+    element: any, 
+    /**
+     * @param elementAction must be performed after changing this attribute
+     */
+    elementAction: Function
+    /**
+     * @param elementAction must be performed after changing this attribute
+     */
+    elementArray: Array<any>
+}
+
 declare global {
     interface HTMLElement { guid?: string; }
     interface Text { guid?: string; }
@@ -36,19 +58,19 @@ export class BindingEngine {
 
     public getControllerBindedToNodes(controllerInstance: uwuControllerType, parentNode: HTMLElement): [uwuControllerType, HTMLElement] {
         controllerInstance ??= this.controllerInstance;
-        const target = document.createElement(parentNode.tagName);
-        parentNode.childNodes.forEach((childNodeOld : ChildNode) => {
+        const target = parentNode.cloneNode(false) as HTMLElement;
+        parentNode.childNodes.forEach((childNodeOld: ChildNode) => {
             const childNodeNew = this.processNode(controllerInstance, childNodeOld as HTMLElement);
             target.append(...childNodeNew);
         });
         return [controllerInstance, target];
     }
 
-    private processNode(controllerInstance: uwuControllerType, node: HTMLElement) : Array<HTMLFullElement> {
+    private processNode(controllerInstance: uwuControllerType, node: HTMLElement, customVariable : CustomVariable | null = null): Array<HTMLFullElement> {
         const el = node as HTMLElement;
         const controller = this.importControllerByTag(controllerInstance, el.tagName);
         el.guid ??= guid();
-        let pack : HTMLFullElement[] = [];
+        let pack: HTMLFullElement[] = [];
         if (controller == null) {
             // console.log("now scanning", node, node.nodeType);
             switch (node.nodeType) {
@@ -56,36 +78,36 @@ export class BindingEngine {
                     const attribute_names_all = el.getAttributeNames();
                     const attribute_names = attribute_names_all.filter(el => !el.startsWith(CONSTRUCTIONAL));
                     const constructional_names = attribute_names_all.filter(el => el.startsWith(CONSTRUCTIONAL));
-                    if (constructional_names.length > 0) { 
+                    if (constructional_names.length > 0) {
                         for (const constructional_name of constructional_names) {
                             return this.processNodeConstructionally(controllerInstance, el, constructional_name);
                         }
                     } else {
+                        const template_element = node.cloneNode(false) as HTMLElement;
+                        template_element.guid = node.guid;
                         for (const attribute_name of attribute_names) {
-                            const attribute_value = el.getAttribute(attribute_name)?.trim() ?? '';
+                            const attribute_value = template_element.getAttribute(attribute_name)?.trim() ?? '';
                             const attribute_name_specless = this.withoutSpec(attribute_name);
-    
+                            template_element.removeAttribute(attribute_name);
+
                             switch (this.checkBindingWay(attribute_name, attribute_value)) {
                                 case BindingWay.IN_WAY:
-                                    this.bindInWay(attribute_name_specless, attribute_value, el, controllerInstance);
+                                    this.bindInWay(attribute_name_specless, attribute_value, template_element, controllerInstance, customVariable);
                                     break;
                                 case BindingWay.OUT_WAY:
-                                    this.bindOutWay(attribute_name_specless, attribute_value, el, controllerInstance);
+                                    this.bindOutWay(attribute_name_specless, attribute_value, template_element, controllerInstance, customVariable);
                                     break;
-                                // case BindingWay.CONSTRUCTIONAL:
-                                //     this.bindConstructionalWay(attribute_name_specless, attribute_value, el, controllerInstance);
-                                    // break;
                                 case BindingWay.NONE:
                                     break;
                                 default:
                                     throw new Error(`Can't identify binding type '${attribute_name}' '${attribute_value}'`);
                             }
                         }
-                        node.childNodes.forEach((childNodeOld : ChildNode) => {
-                            const childNodeNew = this.processNode(controllerInstance, childNodeOld as HTMLElement);
-                            pack.push(...childNodeNew);
-                            // node.replaceChild(childNodeNew, childNodeOld);
+                        node.childNodes.forEach((childNodeOld: ChildNode) => {
+                            const childNodeNew = this.processNode(controllerInstance, childNodeOld as HTMLElement, customVariable);
+                            template_element.append(...childNodeNew)
                         });
+                        pack = [template_element];
                     }
                     break;
                 case node.TEXT_NODE:
@@ -97,7 +119,7 @@ export class BindingEngine {
                         pack.push(newNode);
                         switch (this.checkBindingWay('', textToken)) {
                             case BindingWay.OUTPUT_WAY:
-                                this.bindTextOutPutWay(this.withoutSpec(textToken), newNode);
+                                this.bindTextOutPutWay(this.withoutSpec(textToken), newNode, controllerInstance, customVariable);
                             default:
                                 // parent.insertBefore(newNode, node)
                                 continue;
@@ -109,42 +131,21 @@ export class BindingEngine {
             }
         } else {
             const controllerManager: uwuControllerManager = new uwuControllerManager();
-            let [controllerInstanceInner, parentNode] = controllerManager.processPageByController(controller);
+            let [controllerInstanceInner, parentNode] = controllerManager.processPageByController(controller, node);
             const bindingEngine: BindingEngine = new BindingEngine(controllerInstanceInner);
-            [controllerInstance, parentNode] = bindingEngine.getControllerBindedToNodes(this.controllerInstance, parentNode);
+            [controllerInstance, parentNode] = bindingEngine.getControllerBindedToNodes(controllerInstance, parentNode);
             pack = [parentNode];
-            // for (const attribute_name of el.getAttributeNames()) {
-            //     const attribute_value = el.getAttribute(attribute_name)?.trim() ?? '';
-            //     const attribute_name_specless = this.withoutSpec(attribute_name);
-
-            //     switch (this.checkBindingWay(attribute_name, attribute_value)) {
-            //         case BindingWay.IN_WAY:
-            //             this.bindInWayInner(attribute_name_specless, attribute_value, el, controllerInstance);
-            //             break;
-            //         case BindingWay.OUT_WAY:
-            //             this.bindOutWay(attribute_name_specless, attribute_value, el, controllerInstance);
-            //             break;
-            //         case BindingWay.NONE:
-            //             break;
-            //         default:
-            //             throw new Error(`Can't identify binding type for inner controller '${attribute_name}' '${attribute_value}'`);
-            //     }
-            // }
-            // controllerNodes.forEach(child => el.appendChild(child));
         }
         return pack;
     }
 
-    private processNodeConstructionally(controllerInstance : uwuControllerType, el : HTMLElement, attribute_name : string) : Array<HTMLFullElement> {
-        const parent = el.parentNode!;
+    private processNodeConstructionally(controllerInstance: uwuControllerType, el: HTMLElement, attribute_name: string): Array<HTMLFullElement> {
         const attribute_name_specless = this.withoutSpec(attribute_name);
         const attribute_value = el.getAttribute(attribute_name);
-        el.removeAttribute(attribute_name);
-        
-        const node_template = el.cloneNode() as HTMLElement;
+        const node_template = el.cloneNode(true) as HTMLElement;
+        node_template.removeAttribute(attribute_name);
         const template_comment = document.createComment(el.guid!);
-        parent.insertBefore(template_comment, el);
-        parent.removeChild(el);
+
         if (attribute_value == null) {
             throw new Error(`Empty attribute value faced ${attribute_name} in ${el}`);
         }
@@ -155,38 +156,40 @@ export class BindingEngine {
                     throw new Error("Bad uFor declaration, must be 'let element of this.array'");
                 }
                 const [l, elementName, o, targetArray] = declaration;
-                
-                const elementsArray : Array<HTMLFullElement> = [];
-                let array : Array<any> = this.scopeEval(controllerInstance, targetArray);
+
+                const elementsArray: Array<HTMLFullElement> = [];
+                let array: Array<any> = this.scopeEval(controllerInstance, targetArray);
                 if (!Array.isArray(array)) {
                     throw new Error(`${targetArray} is not type of Array`);
                 }
-                const action = (newArray : Array<any>) => {
+                const action = (newArray: Array<any>) => {
                     for (const node of elementsArray) {
-                        parent.removeChild(node);
+                        template_comment.parentElement?.removeChild(node);
                     }
+                    while (elementsArray.length) { elementsArray.pop(); }
                     for (const newElement of newArray) {
-                        const el = node_template.cloneNode(false) as HTMLElement;
-                        el.guid = guid();
-                        // el.id = newArray.indexOf(newElement).toString();
-                        template_comment.before(el);
-                        elementsArray.push(el);
-                        // template_comment.parentNode?.insertBefore(el, template_comment.nextSibling);
+                        const htmlElement = node_template.cloneNode(true) as HTMLElement;
+                        htmlElement.guid = guid();
+                        const innerElements = this.processNode(controllerInstance, htmlElement, {
+                            element: newElement,
+                            elementName: elementName,
+                            elementAction: action,
+                            elementArray: array,
+                        });
+                        template_comment.before(...innerElements);
+                        elementsArray.push(...innerElements);
                     }
                 }
                 observeArray(array, action);
-                // action(this.scopeEval(controllerInstance, targetArray));
-
-                
-                console.log(elementName, targetArray);
+                action(this.scopeEval(controllerInstance, targetArray));
                 return [template_comment, ...elementsArray];
-                break;
+
             default:
                 throw new Error(`Can't find attribute ${attribute_name}`);
         }
     }
 
-    private importControllerByTag(controllerInstance : uwuControllerType, tagName: string): uwuControllerType | null {
+    private importControllerByTag(controllerInstance: uwuControllerType, tagName: string): uwuControllerType | null {
         const module = controllerInstance.parent as uwuModuleType;
         return (module.prototype.exports as Array<Type<any>>).find((el: Type<any>) => tagName != undefined && (el.prototype?.selector.toString().toLowerCase() ?? "") == tagName.toLowerCase()) ?? null;
     }
@@ -223,53 +226,38 @@ export class BindingEngine {
         return BindingWay.NONE;
     }
 
-    private bindInWay(attribute_name_specless: string, attribute_value: string, el: HTMLElement, controllerInstance: uwuControllerType = this.controllerInstance): void {
+    private bindInWay(attribute_name_specless: string, attribute_value: string, el: HTMLElement, controllerInstance: uwuControllerType = this.controllerInstance, customVariable : CustomVariable | null = null): void {
         const action = this.getActionByAttribute(el, attribute_name_specless);
-        this.addBindingEvent(attribute_value, action, el, controllerInstance);
+        this.addBindingEventToAttribute(attribute_value, action, el, controllerInstance, customVariable);
     }
 
     private bindInWayInner(attribute_name_specless: string, attribute_value: string, el: HTMLElement, controllerInstance: uwuControllerType = this.controllerInstance): void {
         const attribute_name_specless_this = `this.${attribute_name_specless}`;
         const action = (newValue: any) => this.dispatchBindingEvent(controllerInstance, attribute_name_specless_this, newValue);
-        this.addBindingEvent(attribute_value, action, el, this.controllerInstance);
+        this.addBindingEventToAttribute(attribute_value, action, el, this.controllerInstance);
     }
 
-    private bindOutWay(attribute_name_specless: string, attribute_value: string, el: HTMLElement, controllerInstance: uwuControllerType = this.controllerInstance): HTMLElement {
+    private bindOutWay(attribute_name_specless: string, attribute_value: string, el: HTMLElement, controllerInstance: uwuControllerType = this.controllerInstance, customVariable : CustomVariable | null = null): HTMLElement {
         let [cleared_attribute_value, args] = this.getFunctionClearedAttributeValue(attribute_value);
         el.addEventListener(attribute_name_specless, (ev: Event) => {
-            const propToRun = this.scopeEval(this.controllerInstance, cleared_attribute_value);
+            const propToRun = this.scopeEval(controllerInstance, cleared_attribute_value);
             if (typeof propToRun == 'function') {
-                args = this.scopeEval(this.controllerInstance, `[${args}]`);
-                (propToRun as Function).call(this.controllerInstance, ev, ...args);
+                args = this.scopeEval(controllerInstance, `[${args}]`);
+                (propToRun as Function).call(controllerInstance, ev, ...args);
             } else {
-                this.scopeEval(this.controllerInstance, attribute_value);
+                this.scopeEval(controllerInstance, attribute_value);
             }
         });
         return el;
     }
 
-    private bindTextOutPutWay(attribute_value: string, el: Text, controllerInstance: uwuControllerType = this.controllerInstance): Text {
+    private bindTextOutPutWay(attribute_value: string, el: Text, controllerInstance: uwuControllerType = this.controllerInstance, customVariable : CustomVariable | null = null): Text {
         const action = (newValue: any) => el.textContent = newValue;
-        this.addBindingEvent(attribute_value, action, el, controllerInstance);
+        this.addBindingEventToAttribute(attribute_value, action, el, controllerInstance, customVariable);
         return el;
     }
 
-    // private bindConstructionalWay(attribute_name_specless: string, attribute_value: string, el: HTMLElement, controllerInstance: uwuControllerType = this.controllerInstance): HTMLElement {
-    //     let action : Function;
-    //     switch (attribute_name_specless) {
-    //         case `${KEYWORD}for`:
-    //             // action = (newValue: { [cls: string]: string }) => {
-    //             //     Object.keys(newValue).forEach(style => style in el.style ? el.style.setProperty(style, newValue[style]) : false);
-    //             // };
-                
-    //         default:
-    //             break;
-    //     }
-    //     // this.addBindingEvent(attribute_value, action, el, controllerInstance);
-    //     return el;
-    // }
-
-    addBindingEvent(attribute_value: string, action: Function, elementToBind: HTMLElement | Text, controllerInstance: uwuControllerType = this.controllerInstance) {
+    addBindingEventToAttribute(attribute_value: string, action: Function, elementToBind: HTMLElement | Text, controllerInstance: uwuControllerType = this.controllerInstance, customVariable : CustomVariable | null = null) {
         // Clearing calls from value
         let [cleared_attribute_value, _] = this.getFunctionClearedAttributeValue(attribute_value);
 
@@ -282,7 +270,11 @@ export class BindingEngine {
             return joined;
         });
 
-        if (fullTokens.length > 0) {
+        if (customVariable != null && cleared_attribute_value.startsWith(customVariable.elementName)) {
+            const scopedCustomVariableName = cleared_attribute_value.replace(customVariable.elementName, 'this');
+            let currentValue = this.scopeEval(customVariable.element, scopedCustomVariableName);
+            action(currentValue);
+        } else if (fullTokens.length > 0) {
             // Go through every part and add it to bindPack
             // console.log("Starting binding", cleared_attribute_value, "to", elementToBind);
             for (const token of fullTokens) {
@@ -294,6 +286,7 @@ export class BindingEngine {
                 if (elementToBind.guid == undefined) {
                     throw new Error("Trying to bind element with empty guid");
                 }
+
                 if (token in controllerInstance.bindPack && ((elementToBind.guid ?? "") in controllerInstance.bindPack[token].actions == false)) {
                     // console.log("value was in bindPack and guid was not set in actions for this guid", token, elementToBind);
                     if (shouldRunAction) {
@@ -336,7 +329,7 @@ export class BindingEngine {
         }
     }
 
-    dispatchBindingEvent(controllerInstance : uwuControllerType, token: string, forceValue : any = null) {
+    dispatchBindingEvent(controllerInstance: uwuControllerType, token: string, forceValue: any = null) {
         const bindingsToInform = Object.keys(controllerInstance.bindPack).filter(el => el.startsWith(token) /*&& el != token */);
         for (const bindingKey of bindingsToInform) {
             const binding = controllerInstance.bindPack[bindingKey];
