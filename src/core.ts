@@ -2,7 +2,7 @@ import { autoInjectable, container, inject, injectable } from "tsyringe";
 import { AppService } from "./app.service";
 import { BindingEngine } from "./core.engine";
 import { parsedUrl, Route, Type, uwuControlConfig, uwuControllerType, uwuDeclaration, uwuModuleConfig, uwuModuleType, uwuRouterType, uwuRoutesConfig } from "./core.types";
-import { parseQuery } from "./funcs";
+import { guid, parseQuery } from "./funcs";
 
 class uwuModuleManager {
     public target: uwuModuleType;
@@ -100,10 +100,11 @@ class uwuRouteManager {
 export class uwuControllerManager {
 
     // This should return instance of controller and binded to it nodes
-    public processPageByController(controller: uwuControllerType): [uwuControllerType, HTMLElement] {
+    public processPageByController(controller: uwuControllerType, entryElement : HTMLElement | null = null): [uwuControllerType, HTMLElement] {
         const content: string = this.getTemplateContent(controller.prototype.template);
         // const parsedHTML = this.parseHTMLContent(content).querySelector("body")?.innerHTML ?? "";
-        const rootNode = document.createElement(controller.prototype.selector) as HTMLElement;
+        const rootNode = (entryElement?.cloneNode(false) ?? document.createElement(controller.prototype.selector)) as HTMLElement;
+        rootNode.guid = guid();
         rootNode.insertAdjacentHTML("afterbegin", content);
         const controllerInstance = new controller();
         return [controllerInstance, rootNode];

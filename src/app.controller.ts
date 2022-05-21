@@ -6,15 +6,22 @@ import { uwuController, uwuModule } from './core';
     styles: [],
     template: `
         <button (click)="this.addElement(1)">Add Element</button>
-        <input [value]="this.test.some_value" [uClass]="this.cl" *uFor="let element of this.some_array">
-
+        <button (click)="this.removeElement(1)">Remove Element</button>
+        <button (click)="this.test.some_value_square_brackey(1)">
+            <span><b>bold text</b> {{this.test.some_value}}</span>
+        </button>
         <br>
+        <span *uFor="let element of this.some_array">
+            <span [innerHTML]="this.test.some_value"></span>
+            <span>{{element.one}}</span>
+            <br>
+        </span>
+        <auth [some_field_in]="this.test.some_value"></auth>
+        <input [uClass]="this.cl" [(uModel)]="this.test.some_value">
+
+        <!-- <br> -->
     `,
         // <input [value]="this.test.some_value"></input>
-        // <button (click)="this.test.some_value_square_brackey(1)">
-        //     <span><b>bold text</b> {{this.test.some_value}}</span>
-        // </button>
-        // <auth [some_field_in]="this.test.some_value"></auth>
 })
 export class AppController {
     test = {
@@ -33,6 +40,11 @@ export class AppController {
             one: 6,
             two: "7",
         });
+    }
+    removeElement(ev : Event, attr: any) {
+        if (this.some_array.length) {
+            this.some_array.pop();
+        }
     }
     some_array = [
         {one: 1, two: '2'},
