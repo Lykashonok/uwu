@@ -29,6 +29,9 @@ module.exports = {
         port: 4200,
         static: path.resolve(__dirname, 'dist'),
         compress: true,
+        historyApiFallback: {
+            index: 'index.html'
+        }
     },
     plugins: [
         new HtmlWebpackPlugin({

@@ -2,7 +2,7 @@ import { autoInjectable, container, inject, injectable } from "tsyringe";
 import { AppService } from "./app.service";
 import { BindingEngine } from "./core.engine";
 import { uwuTsxRenderManager } from "./core.enginetsx";
-import { parsedUrl, Route, Type, uwuControlConfig, uwuControllerType, uwuDeclaration, uwuModuleConfig, uwuModuleType, uwuRouterType, uwuRoutesConfig, uwuTsxControlConfig, uwuTsxControllerType, uwuTsxElement } from "./core.types";
+import { parsedUrl, Route, Type, uwuControlConfig, uwuControllerType, uwuDeclaration, uwuInjectableType, uwuModuleConfig, uwuModuleType, uwuRouterType, uwuRoutesConfig, uwuTsxControlConfig, uwuTsxControllerType, uwuTsxElement } from "./core.types";
 import { guid, parseQuery } from "./funcs";
 
 class uwuModuleManager {
@@ -92,12 +92,25 @@ class uwuRouteManager {
         }
         return null;
     }
+
+    public static generatePageByCurrentUrl() {
+        const routeManager: uwuRouteManager = new uwuRouteManager();
+        const [module, controller] = routeManager.getModuleControllerByUrl();
+        const controllerManager: uwuControllerManager = new uwuControllerManager();
+        let [controllerInstance, parentNode] = controllerManager.processPageByController(controller);
+        const bindingEngine: BindingEngine = new BindingEngine(controllerInstance);
+        [controllerInstance, parentNode] = bindingEngine.getControllerBindedToNodes(controllerInstance, parentNode);
+
+        const body = document.querySelector("body")!;
+        body.innerHTML = "";
+        body.appendChild(parentNode);
+    }
 }
 
 export class uwuControllerManager {
 
     // This should return instance of controller and binded to it nodes
-    public processPageByController(controller: uwuControllerType | uwuTsxControllerType, entryElement : HTMLElement | null = null): [uwuControllerType | uwuTsxControllerType, HTMLElement] {
+    public processPageByController(controller: uwuControllerType | uwuTsxControllerType, entryElement: HTMLElement | null = null): [uwuControllerType | uwuTsxControllerType, HTMLElement] {
         if (declarationCheck(controller.prototype.type, uwuDeclaration.Controller)) {
             return this.processController(controller, entryElement);
         } else {
@@ -105,7 +118,7 @@ export class uwuControllerManager {
         }
     }
 
-    private processController(controller: uwuControllerType, entryElement : HTMLElement | null = null) : [uwuControllerType, HTMLElement] {
+    private processController(controller: uwuControllerType, entryElement: HTMLElement | null = null): [uwuControllerType, HTMLElement] {
         const content: string = this.getTemplateContent(controller.prototype.template);
         const rootNode = (entryElement?.cloneNode(false) ?? document.createElement(controller.prototype.selector)) as HTMLElement;
         rootNode.guid = guid();
@@ -114,16 +127,16 @@ export class uwuControllerManager {
         return [controllerInstance, rootNode];
     }
 
-    private processTsxController(controller: uwuTsxControllerType, entryElement : HTMLElement | null = null) : [uwuTsxControllerType, HTMLElement] {
+    private processTsxController(controller: uwuTsxControllerType, entryElement: HTMLElement | null = null): [uwuTsxControllerType, HTMLElement] {
         const rootNode = (entryElement?.cloneNode(false) ?? document.createElement(controller.prototype.selector)) as HTMLElement;
         const controllerInstance = new controller();
         let element = controller.prototype.hook();
-        uwuTsxRenderManager.hooks[controller.prototype.guid] = (newState : any) => {
+        uwuTsxRenderManager.hooks[controller.prototype.guid] = (newState: any) => {
             const newHook = controller.prototype.hook(newState);
             rootNode.replaceChild(newHook, element);
             element = newHook;
         }
-        console.log(uwuTsxRenderManager);
+        // console.log(uwuTsxRenderManager);
         rootNode.appendChild(element)
         return [controllerInstance, rootNode];
     }
@@ -139,6 +152,23 @@ export class uwuControllerManager {
         const parser = new DOMParser();
         const htmlDoc = parser.parseFromString(content, 'text/html');
         return htmlDoc;
+    }
+
+    public static getInjectableInstance(controller: uwuControllerType | uwuTsxControllerType, injectable: uwuInjectableType): any {
+        let currentModule = controller.prototype.parent;
+        console.log("Trying to get parent", controller, "is", controller.prototype.parent);
+        while (currentModule != null) {
+            const imports = currentModule.prototype.imports;
+            if (Array.isArray(imports)) {
+                for (const obj of imports) {
+                    if (declarationCheck(obj.prototype.type, uwuDeclaration.Injectable) && obj == injectable) {
+                        return obj;
+                    }
+                }
+            }
+            currentModule = currentModule.prototype.parent;
+        }
+        return null;
     }
 }
 
@@ -161,10 +191,10 @@ export function uwuModule(config: uwuModuleConfig): Function {
                     break;
                 case uwuDeclaration.Module:
                 case uwuDeclaration.Injectable:
-                    if (!container.isRegistered(obj)) {
-                        container.register(name, { useValue: new obj() });
-                    }
-                    // console.log(obj, 'stored with name', name);
+                    const instance = new obj();
+                    container.register<typeof obj>(obj, { useValue: new obj() });
+                    console.log(instance, 'stored with name', name);
+                    // container.registerInstance<typeof obj>(name, instance);
                     break;
                 default:
                     throw new Error("Object must be uwu type (uwuModule, uwuService etc.)");
@@ -176,10 +206,10 @@ export function uwuModule(config: uwuModuleConfig): Function {
             // switch (obj.prototype.type as uwuDeclaration) {
             //     case uwuDeclaration.Controller:
             //         const name = `${moduleClass.name}.${obj.name}`;
+            //         container.register(name, {useValue: obj});
+            //         console.log(`${obj} was registered`);
 
             //         // let t = getType<ConstructorParameters<typeof obj>>();
-            //         // container.register(name, {useValue: obj});
-            //         // console.log(`${name} was registered`);
             //         // console.log(obj.constructor);
             //         // console.log(obj.constructor.toString());
             //         // console.log(typeof obj.constructor.arguments);
@@ -209,7 +239,7 @@ export function uwuTsxController(config: uwuTsxControlConfig): Function {
         // console.log('uwuController return function');
         objectClass.prototype.type = uwuDeclaration.ControllerTsx;
         objectClass.prototype.selector = config.selector;
-        const newGuid : string = guid();
+        const newGuid: string = guid();
         objectClass.prototype.guid = newGuid;
         objectClass.prototype.hook = config.hook(newGuid);
     };
@@ -226,6 +256,20 @@ export function Input() {
     }
 }
 
+export function Inject<T>(obj: Type<any>) {
+    return function (target: any, key: PropertyKey) {
+        let service: T;
+
+        Object.defineProperty(target, key, {
+            get: () => service,
+            set: value => service = value,
+            enumerable: true
+        });
+
+        service = container.resolve(obj)
+    };
+}
+
 export function uwuRouter(config: uwuRoutesConfig): Function {
     // console.log('uwuRouter');
     return (objectClass: Function) => {
@@ -238,9 +282,10 @@ export function uwuRouter(config: uwuRoutesConfig): Function {
 export function uwuInjectable(): Function {
     return (objectClass: Type<Function>) => {
         objectClass.prototype.type = uwuDeclaration.Injectable;
-        if (!container.isRegistered(objectClass)) {
-            container.register(objectClass, { useValue: new objectClass() });
-        }
+        // if (!container.isRegistered(objectClass)) {
+        //     container.register(objectClass, { useValue: new objectClass() });
+        //     console.log(objectClass, 'stored with name', objectClass.prototype.name);
+        // }
         // type constructorParameters = ConstructorParameters<typeof objectClass>;
         // let vars : constructorParameters = objectClass.prototype.constructor;
     };
@@ -250,13 +295,23 @@ declare global {
     interface Window { root: Type<any>; }
 }
 
-function setEntryPoint(target: HTMLElement | null, controllerInstance: uwuControllerType, controllerNodes: NodeListOf<ChildNode>) {
-    const entryPoint = document.createElement(controllerInstance.selector);
-    controllerNodes.forEach(node => entryPoint.appendChild(node));
-    if (target == null) {
-        throw new Error("Can't find body in global template");
+@uwuInjectable()
+export class RouterService {
+    navigate(path: string[]) {
+        let localUrl = "";
+        for (let token of path) {
+            if (token.startsWith('/')) {
+                token = token.substring(1);
+            }
+            if (token.endsWith('/')) {
+                token = token.substring(token.length - 2);
+            }
+            localUrl += token;
+        }
+        const newUrl = `${window.location.protocol}//${window.location.host}/${localUrl}/`;
+        window.history.pushState({}, path[path.length - 1], newUrl);
+        uwuRouteManager.generatePageByCurrentUrl();
     }
-    target.appendChild(entryPoint);
 }
 
 export function bootstrap<T>(module: Type<T>) {
@@ -268,15 +323,9 @@ export function bootstrap<T>(module: Type<T>) {
     }
     window.root = module;
     window.onload = e => {
-        const routeManager: uwuRouteManager = new uwuRouteManager();
-        const [module, controller] = routeManager.getModuleControllerByUrl();
-        const controllerManager: uwuControllerManager = new uwuControllerManager();
-        let [controllerInstance, parentNode] = controllerManager.processPageByController(controller);
-        const bindingEngine: BindingEngine = new BindingEngine(controllerInstance);
-        [controllerInstance, parentNode] = bindingEngine.getControllerBindedToNodes(controllerInstance, parentNode);
-        document.querySelector("body")?.appendChild(parentNode);
+        uwuRouteManager.generatePageByCurrentUrl()
     };
-    // window.onpopstate = e => {
-
-    // };
+    window.onpopstate = e => {
+        uwuRouteManager.generatePageByCurrentUrl()
+    };
 };

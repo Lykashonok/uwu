@@ -1,11 +1,13 @@
+import { container } from 'tsyringe';
 import { AppService } from './app.service';
-import { uwuController, uwuModule } from './core';
+import { uwuController, uwuModule, Inject, RouterService } from './core';
 
 @uwuController({
     selector: 'app',
     styles: [],
     template: `
         <fancy-button></fancy-button>
+        <button (click)="this.navigate()">Navigate</button>
         <button (click)="this.addElement(1)">Add Element</button>
         <button (click)="this.removeElement(1)">Remove Element</button>
         <button (click)="this.test.some_value_square_brackey(1)">
@@ -18,13 +20,13 @@ import { uwuController, uwuModule } from './core';
             <br>
         </span>
         <auth [some_field_in]="this.test.some_value"></auth>
-        <input [uClass]="this.cl" [(uModel)]="this.test.some_value">
-
-        <!-- <br> -->
+        <input [uClass]="this.cl" [(uModel)]="this.service.some_service_value">
     `,
-        // <input [value]="this.test.some_value"></input>
 })
 export class AppController {
+    @Inject(AppService) service? : AppService;
+    @Inject(RouterService) router? : RouterService;
+
     test = {
         some_value_square_brackey : (ev : Event, inc : number) => {
             this.test.some_value += inc;
@@ -47,6 +49,9 @@ export class AppController {
             this.some_array.pop();
         }
     }
+    navigate(){
+        this.router?.navigate(["/auth"]);
+    }
     some_array = [
         {one: 1, two: '2'},
         {one: 2, two: '3'},
@@ -56,8 +61,8 @@ export class AppController {
     ]
     constructor(
         a : number,
-        service : AppService,
     ){
-        // console.log('AppController contructor');
+        console.log('AppController contructor');
+        console.log(this.service);
     }
 }
