@@ -5,6 +5,7 @@ import { uwuController, uwuModule } from './core';
     selector: 'app',
     styles: [],
     template: `
+        <fancy-button></fancy-button>
         <button (click)="this.addElement(1)">Add Element</button>
         <button (click)="this.removeElement(1)">Remove Element</button>
         <button (click)="this.test.some_value_square_brackey(1)">

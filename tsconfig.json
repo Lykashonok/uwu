@@ -10,7 +10,8 @@
         "outDir": "./dist/",
         "sourceMap": true,
         "declaration": true,
-        "jsx": "preserve"
+        "jsx": "react",
+        "reactNamespace": "uwuTsx"
     },
     "include": ["src"],
     "exclude": ["node_modules", "dist"]

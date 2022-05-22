@@ -3,6 +3,7 @@ import { AppService } from './app.service';
 import { AuthController } from './auth/auth.component';
 import { uwuModule, uwuRouter } from './core';
 import { CustomButtonController } from './custom-button/custom-button.component';
+import { FancyButtonComponent } from './fancy-button.component';
 
 @uwuRouter({
     routes : [
@@ -20,6 +21,7 @@ class AppRouter {}
     exports: [
         AppController,
         AuthController,
+        FancyButtonComponent,
         CustomButtonController,
     ],
 })

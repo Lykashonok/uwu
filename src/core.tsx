@@ -1,7 +1,8 @@
 import { autoInjectable, container, inject, injectable } from "tsyringe";
 import { AppService } from "./app.service";
 import { BindingEngine } from "./core.engine";
-import { parsedUrl, Route, Type, uwuControlConfig, uwuControllerType, uwuDeclaration, uwuModuleConfig, uwuModuleType, uwuRouterType, uwuRoutesConfig } from "./core.types";
+import { uwuTsxRenderManager } from "./core.enginetsx";
+import { parsedUrl, Route, Type, uwuControlConfig, uwuControllerType, uwuDeclaration, uwuModuleConfig, uwuModuleType, uwuRouterType, uwuRoutesConfig, uwuTsxControlConfig, uwuTsxControllerType, uwuTsxElement } from "./core.types";
 import { guid, parseQuery } from "./funcs";
 
 class uwuModuleManager {
@@ -9,10 +10,6 @@ class uwuModuleManager {
     constructor(target: Type<Function>) {
         this.target = target;
     };
-
-    render(selector = 'application'): void {
-
-    }
 
     public getRouter(): uwuRouterType | null {
         const imports = this.target.prototype.imports;
@@ -100,13 +97,34 @@ class uwuRouteManager {
 export class uwuControllerManager {
 
     // This should return instance of controller and binded to it nodes
-    public processPageByController(controller: uwuControllerType, entryElement : HTMLElement | null = null): [uwuControllerType, HTMLElement] {
+    public processPageByController(controller: uwuControllerType | uwuTsxControllerType, entryElement : HTMLElement | null = null): [uwuControllerType | uwuTsxControllerType, HTMLElement] {
+        if (declarationCheck(controller.prototype.type, uwuDeclaration.Controller)) {
+            return this.processController(controller, entryElement);
+        } else {
+            return this.processTsxController(controller, entryElement);
+        }
+    }
+
+    private processController(controller: uwuControllerType, entryElement : HTMLElement | null = null) : [uwuControllerType, HTMLElement] {
         const content: string = this.getTemplateContent(controller.prototype.template);
-        // const parsedHTML = this.parseHTMLContent(content).querySelector("body")?.innerHTML ?? "";
         const rootNode = (entryElement?.cloneNode(false) ?? document.createElement(controller.prototype.selector)) as HTMLElement;
         rootNode.guid = guid();
         rootNode.insertAdjacentHTML("afterbegin", content);
         const controllerInstance = new controller();
+        return [controllerInstance, rootNode];
+    }
+
+    private processTsxController(controller: uwuTsxControllerType, entryElement : HTMLElement | null = null) : [uwuTsxControllerType, HTMLElement] {
+        const rootNode = (entryElement?.cloneNode(false) ?? document.createElement(controller.prototype.selector)) as HTMLElement;
+        const controllerInstance = new controller();
+        let element = controller.prototype.hook();
+        uwuTsxRenderManager.hooks[controller.prototype.guid] = (newState : any) => {
+            const newHook = controller.prototype.hook(newState);
+            rootNode.replaceChild(newHook, element);
+            element = newHook;
+        }
+        console.log(uwuTsxRenderManager);
+        rootNode.appendChild(element)
         return [controllerInstance, rootNode];
     }
 
@@ -124,7 +142,7 @@ export class uwuControllerManager {
     }
 }
 
-function declarationCheck(target: any, compareTo: uwuDeclaration) {
+export function declarationCheck(target: any, compareTo: uwuDeclaration) {
     return target as uwuDeclaration == compareTo;
 }
 
@@ -182,6 +200,18 @@ export function uwuController(config: uwuControlConfig): Function {
         objectClass.prototype.selector = config.selector;
         objectClass.prototype.template = config.template;
         objectClass.prototype.bindPack = {};
+    };
+}
+
+export function uwuTsxController(config: uwuTsxControlConfig): Function {
+    // console.log('uwuController', config.selector);
+    return (objectClass: Function) => {
+        // console.log('uwuController return function');
+        objectClass.prototype.type = uwuDeclaration.ControllerTsx;
+        objectClass.prototype.selector = config.selector;
+        const newGuid : string = guid();
+        objectClass.prototype.guid = newGuid;
+        objectClass.prototype.hook = config.hook(newGuid);
     };
 }
 
@@ -249,4 +279,4 @@ export function bootstrap<T>(module: Type<T>) {
     // window.onpopstate = e => {
 
     // };
-}
+};

@@ -9,6 +9,12 @@ export interface uwuControlConfig {
     styles: String[]
 }
 
+export interface uwuTsxControlConfig {
+    hook: Function,
+    selector: String,
+    styles: String[]
+}
+
 export type Route = {
     path: string,
     children?: Array<Route>,
@@ -20,6 +26,25 @@ export type Route = {
     regexp?: boolean
 }
 
+export type uwuTsxElement = {
+    hooks?: any,
+    type?: string | Function,
+    child?: uwuTsxElement | null,
+    parent?: uwuTsxElement,
+    alternate?: uwuTsxElement | null,
+    sibling?: uwuTsxElement | null,
+    effectTag?: "PLACEMENT" | "UPDATE" | "DELETION",
+    dom?: HTMLElement | null,
+    props: {
+        [key: string]: any,
+        children?: Array<uwuTsxElement>
+    }
+}
+
+export type HookFunction = {
+    (): uwuTsxElement;
+}
+
 export interface uwuRoutesConfig {
     routes : Array<Route>,
 }
@@ -27,12 +52,14 @@ export interface uwuRoutesConfig {
 export enum uwuDeclaration {
     Module,
     Controller,
+    ControllerTsx,
     Injectable,
     Router,
 }
 
 export type uwuModuleType = Type<any>;
 export type uwuControllerType = Type<any>;
+export type uwuTsxControllerType = Type<any>;
 export type uwuInjectableType = Type<any>;
 export type uwuRouterType = Type<any>;
 
