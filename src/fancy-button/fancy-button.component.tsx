@@ -1,5 +1,6 @@
-import { uwuTsxController } from "./core"
-import uwuTsx, { uwuTsxRenderManager } from "./core.enginetsx";
+import { AppService } from "../app.service";
+import { Inject, uwuTsxController } from "../core"
+import uwuTsx, { uwuTsxRenderManager } from "../core.enginetsx";
 
 @uwuTsxController({
     selector: "fancy-button",
@@ -16,9 +17,9 @@ import uwuTsx, { uwuTsxRenderManager } from "./core.enginetsx";
                 uwuTsxRenderManager.render(guid, currentState);
             }
             return (
-                <h1 onClick={() => changeState()}>
-                    Count: {currentState.some_prop}
-                </h1>
+                <button onClick={() => changeState()}>
+                    <h1>Count: {currentState.some_prop}</h1>
+                </button>
             )
         }
     }

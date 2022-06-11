@@ -1,12 +1,43 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset='utf-8'>
     <meta http-equiv='X-UA-Compatible' content='IE=edge'>
     <title>Page Title</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
 </head>
+
 <body>
+    <article class="detail">
+        <h2>There's some explanations about framework</h2>
+        <p>This framework was created for one main reason - unite two conceptions for manipulating data and template of
+            page: <i><b>declarative</b></i> and <i><b>imperative</b></i></p>
+        <p>When we speak about declarative method, that means you just need to <b><i>declare</i></b> instructions for
+            manipulating data, for example:</p>
+        <pre>
+            <code>
+&lt;div [innerHtml]="this.some_variable"&gt;&lt;/div&gt;</code>
+        </pre>
+        <p>You just need to say <q><i>Please, bind this.some_variable to same variable in current controller</i></q>, and every change of variable this attribute will <b>change together</b>. It makes developent <b><i>much</i> easier</b> </p>
+        <p>In controller you just need to declare this variable, and that's it, everything works!</p>
+        <pre>
+            <code>
+                import { uwuController } from './core';
+
+                @uwuController({
+                    selector: "some",
+                    styles: [],
+                    template: `
+                        <div [innerHtml]="this.some_variable"></div>
+                    `,
+                })
+                export class SomeController {
+                    some_variable = "Some stored variable";
+                }
+            </code>
+        </pre>
+    </article>
 </body>
+
 </html>

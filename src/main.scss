@@ -1,0 +1,137 @@
+body {
+    $value: green;
+    $sub-color: #fff8ff;
+    $sub-color-dark: #b7cdda;
+    $horizontal-margin: 10%;
+    $vertical-margin: 40px;
+    margin: 0;
+    .nav {
+        display: flex;
+        margin: $vertical-margin $horizontal-margin;
+        box-sizing: content-box;
+        justify-content: space-between;
+        align-items: center;
+        span {
+            font-family: sans-serif;
+        }
+    }
+    main {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        position: relative;
+        .container {
+            width: 100%;
+            margin: 40px $horizontal-margin;
+            min-height: 500px;
+            background-color: #f8f9fb;
+            margin-top: 60px;
+            border-radius: 10px;
+            .select {
+                position: absolute;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                border-radius: 40px;
+                width: 280px;
+                height: 70px;
+                background-color: #2a2c2b;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0 20px;
+                font-family: sans-serif;
+                box-sizing: border-box;
+                font-size: 15px;
+                .option {
+                    width: calc(50% - 10px);
+                    cursor: pointer;
+                    text-align: center;
+                    &.option_selected {
+                        background-color: #b7cdda;
+                        height: 40px;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        border-radius: 40px;
+                        padding: 0 5px;
+                        color: #2a2c2b;
+                    }
+                    color: #fff;
+                }
+            }
+            .options {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-around;
+                font-family: system-ui;
+                padding-top: 40px;
+                button {
+                    width: 100%;
+                }
+                .option {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    h2 {
+                    }
+                    .price {
+                        font-size: 24px;
+                        font-family: sans-serif;
+                        margin-bottom: 20px;
+                    }
+                    .description {
+                        margin-bottom: 20px;
+                    }
+                    .bullets {
+                        display: flex;
+                        flex-direction: column;
+                        border-radius: 50%;
+                        .bullet {
+                            margin-bottom: 5px;
+                            display: flex;
+                            align-items: center;
+                            &:last-child {
+                                margin-bottom: 20px;
+                            }
+                            div {
+                                width: 25px;
+                                height: 25px;
+                                margin-right: 5px;
+                                background-color: #2a2c2b;
+                                color: white;
+                                border-radius: 50%;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            }
+                        }
+                    }
+                }
+            }
+            .detail {
+                padding: 30px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                pre {
+                    background-color: $sub-color;
+                    border: 1px solid $sub-color-dark;
+                    border-radius: 4px;
+                    code {
+                    }
+                }
+            }
+        }
+    }
+    .button_primary {
+        border-radius: 4px;
+        border-color: rgba(0, 0, 0, 0.2);
+        border-width: 1px;
+        background-color: transparent;
+        padding: 10px 20px;
+        box-sizing: border-box;
+        &.button_reversed {
+            background-color: #393b3a;
+            color: white;
+        }
+    }
+}

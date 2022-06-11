@@ -102,7 +102,9 @@ class uwuRouteManager {
         [controllerInstance, parentNode] = bindingEngine.getControllerBindedToNodes(controllerInstance, parentNode);
 
         const body = document.querySelector("body")!;
-        body.innerHTML = "";
+        while (body.firstChild) {
+            body.removeChild(body.firstChild);
+        }
         body.appendChild(parentNode);
     }
 }
@@ -111,11 +113,13 @@ export class uwuControllerManager {
 
     // This should return instance of controller and binded to it nodes
     public processPageByController(controller: uwuControllerType | uwuTsxControllerType, entryElement: HTMLElement | null = null): [uwuControllerType | uwuTsxControllerType, HTMLElement] {
+        this.updateStyles(controller);
         if (declarationCheck(controller.prototype.type, uwuDeclaration.Controller)) {
-            return this.processController(controller, entryElement);
+            [controller, entryElement] = this.processController(controller, entryElement);
         } else {
-            return this.processTsxController(controller, entryElement);
+            [controller, entryElement] = this.processTsxController(controller, entryElement);
         }
+        return [controller, entryElement];
     }
 
     private processController(controller: uwuControllerType, entryElement: HTMLElement | null = null): [uwuControllerType, HTMLElement] {
@@ -170,6 +174,21 @@ export class uwuControllerManager {
         }
         return null;
     }
+
+    private updateStyles(controller: uwuControllerType | uwuTsxControllerType) {
+        const head = document.querySelector('head');
+        const id = `style.${controller.prototype.selector}`;
+        document.querySelectorAll(`[id^="${id}"]`).forEach(style => {
+            head?.removeChild(style);
+        });
+
+        if ((controller.prototype?.styles?.length ?? 0) !== 0) {
+            const newStyle = document.createElement('style');
+            newStyle.innerHTML = controller.prototype.styles.join("\n");
+            newStyle.id = id;
+            head?.appendChild(newStyle);
+        }
+    }
 }
 
 export function declarationCheck(target: any, compareTo: uwuDeclaration) {
@@ -193,7 +212,7 @@ export function uwuModule(config: uwuModuleConfig): Function {
                 case uwuDeclaration.Injectable:
                     const instance = new obj();
                     container.register<typeof obj>(obj, { useValue: new obj() });
-                    console.log(instance, 'stored with name', name);
+                    // console.log(instance, 'stored with name', name);
                     // container.registerInstance<typeof obj>(name, instance);
                     break;
                 default:
@@ -229,6 +248,7 @@ export function uwuController(config: uwuControlConfig): Function {
         objectClass.prototype.type = uwuDeclaration.Controller;
         objectClass.prototype.selector = config.selector;
         objectClass.prototype.template = config.template;
+        objectClass.prototype.styles = config.styles;
         objectClass.prototype.bindPack = {};
     };
 }
@@ -239,6 +259,7 @@ export function uwuTsxController(config: uwuTsxControlConfig): Function {
         // console.log('uwuController return function');
         objectClass.prototype.type = uwuDeclaration.ControllerTsx;
         objectClass.prototype.selector = config.selector;
+        objectClass.prototype.styles = config.styles;
         const newGuid: string = guid();
         objectClass.prototype.guid = newGuid;
         objectClass.prototype.hook = config.hook(newGuid);
@@ -308,7 +329,14 @@ export class RouterService {
             }
             localUrl += token;
         }
-        const newUrl = `${window.location.protocol}//${window.location.host}/${localUrl}/`;
+        const result = [window.location.protocol + "/"];
+        if (window.location.host.trim() != '') {
+            result.push(window.location.host);
+        }
+        if (localUrl.trim() != '') {
+            result.push(localUrl);
+        }
+        const newUrl = result.join('/');
         window.history.pushState({}, path[path.length - 1], newUrl);
         uwuRouteManager.generatePageByCurrentUrl();
     }

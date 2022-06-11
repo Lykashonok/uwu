@@ -1,4 +1,5 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const miniCss = require('mini-css-extract-plugin');
 const path = require('path')
 
 module.exports = {
@@ -22,6 +23,14 @@ module.exports = {
                 test: /\.(ts|tsx)?$/,
                 use: ['ts-loader'],
                 exclude: /node_modules/
+            },
+            {
+                test: /\.(s*)css$/,
+                use: [
+                    miniCss.loader,
+                    'css-loader',
+                    'sass-loader',
+                ]
             }
         ]
     },
@@ -35,7 +44,11 @@ module.exports = {
     },
     plugins: [
         new HtmlWebpackPlugin({
-            template: 'src/index.html'
-        })
+            template: 'src/index.html',
+            favicon: "./src/favicon.ico"
+        }),
+        new miniCss({
+            filename: 'style.css',
+        }),
     ]
 };

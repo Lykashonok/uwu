@@ -9,7 +9,6 @@ import { Input, uwuController } from "../core";
 })
 export class CustomButtonController {
     constructor() {
-        
     }
 
     @Input()

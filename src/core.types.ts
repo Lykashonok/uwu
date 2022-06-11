@@ -4,15 +4,15 @@ export interface uwuModuleConfig {
 }
 
 export interface uwuControlConfig {
-    template: String,
-    selector: String,
-    styles: String[]
+    template: string,
+    selector: string,
+    styles: string[]
 }
 
 export interface uwuTsxControlConfig {
-    hook: Function,
-    selector: String,
-    styles: String[]
+    hook: (guid : string) => Function,
+    selector: string,
+    styles: string[]
 }
 
 export type Route = {

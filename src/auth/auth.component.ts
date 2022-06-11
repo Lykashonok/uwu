@@ -4,8 +4,7 @@ import { Input, uwuController } from "../core";
     selector: 'auth',
     styles: [],
     template: `
-        <span [innerHTML]="this.some_field_in">Test</span>
-        <custom-button [title]="this.some_field_in"></custom-button>
+        <fancy-button></fancy-button>
     `,
 })
 export class AuthController {

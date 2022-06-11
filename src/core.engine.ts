@@ -75,69 +75,76 @@ export class BindingEngine {
         let pack: HTMLFullElement[] = [];
         if (controller == null) {
             // console.log("now scanning", node, node.nodeType);
-            switch (node.nodeType) {
-                case node.ELEMENT_NODE:
-                    const attribute_names_all = el.getAttributeNames();
-                    const attribute_names = attribute_names_all.filter(el => !el.startsWith(CONSTRUCTIONAL));
-                    const constructional_names = attribute_names_all.filter(el => el.startsWith(CONSTRUCTIONAL));
-                    if (constructional_names.length > 0) {
-                        for (const constructional_name of constructional_names) {
-                            return this.processNodeConstructionally(controllerInstance, el, constructional_name);
+            if (node.tagName == "PRE") {
+                pack.push(node);
+            } else {
+                switch (node.nodeType) {
+                    case node.ELEMENT_NODE:
+                        const attribute_names_all = el.getAttributeNames();
+                        const attribute_names = attribute_names_all.filter(el => !el.startsWith(CONSTRUCTIONAL));
+                        const constructional_names = attribute_names_all.filter(el => el.startsWith(CONSTRUCTIONAL));
+                        if (constructional_names.length > 0) {
+                            for (const constructional_name of constructional_names) {
+                                return this.processNodeConstructionally(controllerInstance, el, constructional_name);
+                            }
+                        } else {
+                            const template_element = node.cloneNode(false) as HTMLElement;
+                            template_element.guid = node.guid;
+                            for (const attribute_name of attribute_names) {
+                                const attribute_value = template_element.getAttribute(attribute_name)?.trim() ?? '';
+                                const attribute_name_specless = this.withoutSpec(attribute_name);
+                                if (attribute_name_specless != attribute_name) {
+                                    template_element.removeAttribute(attribute_name);
+                                }
+    
+                                switch (this.checkBindingWay(attribute_name, attribute_value)) {
+                                    case BindingWay.IN_WAY:
+                                        this.bindInWay(attribute_name_specless, attribute_value, template_element, controllerInstance, customVariable);
+                                        break;
+                                    case BindingWay.OUT_WAY:
+                                        this.bindOutWay(attribute_name_specless, attribute_value, template_element, controllerInstance, customVariable);
+                                        break;
+                                    case BindingWay.BOTH_WAY:
+                                        this.bindBothWay(attribute_name_specless, attribute_value, template_element, controllerInstance, customVariable);
+                                        break;
+                                    case BindingWay.NONE:
+                                        break;
+                                    default:
+                                        throw new Error(`Can't identify binding type '${attribute_name}' '${attribute_value}'`);
+                                }
+                            }
+                            node.childNodes.forEach((childNodeOld: ChildNode) => {
+                                const childNodeNew = this.processNode(controllerInstance, childNodeOld as HTMLElement, customVariable);
+                                template_element.append(...childNodeNew)
+                            });
+                            pack = [template_element];
                         }
-                    } else {
-                        const template_element = node.cloneNode(false) as HTMLElement;
-                        template_element.guid = node.guid;
-                        for (const attribute_name of attribute_names) {
-                            const attribute_value = template_element.getAttribute(attribute_name)?.trim() ?? '';
-                            const attribute_name_specless = this.withoutSpec(attribute_name);
-                            template_element.removeAttribute(attribute_name);
-
-                            switch (this.checkBindingWay(attribute_name, attribute_value)) {
-                                case BindingWay.IN_WAY:
-                                    this.bindInWay(attribute_name_specless, attribute_value, template_element, controllerInstance, customVariable);
-                                    break;
-                                case BindingWay.OUT_WAY:
-                                    this.bindOutWay(attribute_name_specless, attribute_value, template_element, controllerInstance, customVariable);
-                                    break;
-                                case BindingWay.BOTH_WAY:
-                                    this.bindBothWay(attribute_name_specless, attribute_value, template_element, controllerInstance, customVariable);
-                                    break;
-                                case BindingWay.NONE:
-                                    break;
+                        break;
+                    case node.TEXT_NODE:
+                        // console.log(node.parentElement);
+                        const contents = node.textContent?.trim().split(' ') ?? [];
+                        // const parent = node.parentNode!;
+                        for (let textToken of contents) {
+                            const newNode = document.createTextNode(textToken);
+                            newNode.guid = guid();
+                            pack.push(newNode, document.createTextNode(' '));
+                            switch (this.checkBindingWay('', textToken)) {
+                                case BindingWay.OUTPUT_WAY:
+                                    this.bindTextOutPutWay(this.withoutSpec(textToken), newNode, controllerInstance, customVariable);
                                 default:
-                                    throw new Error(`Can't identify binding type '${attribute_name}' '${attribute_value}'`);
+                                    // parent.insertBefore(newNode, node)
+                                    continue;
                             }
                         }
-                        node.childNodes.forEach((childNodeOld: ChildNode) => {
-                            const childNodeNew = this.processNode(controllerInstance, childNodeOld as HTMLElement, customVariable);
-                            template_element.append(...childNodeNew)
-                        });
-                        pack = [template_element];
-                    }
-                    break;
-                case node.TEXT_NODE:
-                    const contents = node.textContent?.trim().split(' ') ?? [];
-                    // const parent = node.parentNode!;
-                    for (let textToken of contents) {
-                        const newNode = document.createTextNode(textToken);
-                        newNode.guid = guid();
-                        pack.push(newNode);
-                        switch (this.checkBindingWay('', textToken)) {
-                            case BindingWay.OUTPUT_WAY:
-                                this.bindTextOutPutWay(this.withoutSpec(textToken), newNode, controllerInstance, customVariable);
-                            default:
-                                // parent.insertBefore(newNode, node)
-                                continue;
-                        }
-                    }
-                default:
-                // console.error(node);
-                // throw new Error(`Can't determine node type ${node.nodeType}`);
+                    default:
+                    // console.error(node);
+                    // throw new Error(`Can't determine node type ${node.nodeType}`);
+                }
             }
         } else {
             const controllerManager: uwuControllerManager = new uwuControllerManager();
             let [controllerInstanceInner, el] = controllerManager.processPageByController(controller, node);
-            if (declarationCheck(controllerInstanceInner, uwuDeclaration.Controller)) {
+            if (declarationCheck(controller.prototype.type, uwuDeclaration.Controller)) {
                 const bindingEngine: BindingEngine = new BindingEngine(controllerInstanceInner);
                 [controllerInstanceInner, el] = bindingEngine.getControllerBindedToNodes(controllerInstanceInner, el);
                 for (const attribute_name of el.getAttributeNames()) {
@@ -410,6 +417,7 @@ export class BindingEngine {
             case `${KEYWORD}class`:
                 return (newValue: { [cls: string]: boolean }) => {
                     Object.keys(newValue).filter(c => newValue[c]).forEach(styleClass => el.classList.add(styleClass));
+                    Object.keys(newValue).filter(c => !newValue[c]).forEach(styleClass => el.classList.remove(styleClass));
                 };
             case `${KEYWORD}style`:
                 return (newValue: { [cls: string]: string }) => {
