@@ -1,4 +1,4 @@
-import { Input, uwuController } from "../core";
+import { Input, uwuController } from "uwu-framework/core";
 
 @uwuController({
     selector: 'custom-button',

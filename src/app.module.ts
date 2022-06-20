@@ -1,7 +1,7 @@
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthController } from './auth/auth.component';
-import { uwuModule, uwuRouter } from './core';
+import { uwuModule, uwuRouter } from 'uwu-framework/core';
 import { CustomButtonController } from './custom-button/custom-button.component';
 import { DetailController } from './detail/detail.component';
 import { FancyButtonComponent } from './fancy-button/fancy-button.component';

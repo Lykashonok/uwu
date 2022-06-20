@@ -1,6 +1,6 @@
 import { AppService } from "../app.service";
-import { Inject, uwuTsxController } from "../core"
-import uwuTsx, { uwuTsxRenderManager } from "../core.enginetsx";
+import { Inject, uwuTsxController } from "uwu-framework/core"
+import uwuTsx, { uwuTsxRenderManager } from "uwu-framework/core.enginetsx";
 
 @uwuTsxController({
     selector: "fancy-button",

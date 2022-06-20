@@ -1,4 +1,4 @@
-import { uwuInjectable } from './core';
+import { uwuInjectable } from 'uwu-framework/core';
 
 @uwuInjectable()
 export class AppService {

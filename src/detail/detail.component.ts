@@ -1,5 +1,5 @@
 import { AppService } from "../app.service";
-import { Inject, Input, RouterService, uwuController } from "../core";
+import { Inject, Input, RouterService, uwuController } from "uwu-framework/core";
 
 @uwuController({
     selector: 'detail',
@@ -31,8 +31,17 @@ import { Inject, Input, RouterService, uwuController } from "../core";
                 <div class="option" (click)="this.navigateToBase()">Billings</div>
                 <div class="option option_selected">Additional Info</div>
                 </div>
+                <article>
+                    <h2>Topics</h2>
+                    <ul>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#examples">Examples</a></li>
+                        <li><a href="#installation">Installation</a></li>
+                        <li><a href="#installation">License acquiring</a></li>
+                    </ul>
+                </article>
                 <article class="detail">
-        <h2>There's some explanations about framework</h2>
+        <h2 id="about">About framework</h2>
         <p>This framework was created for one main reason - unite two conceptions for manipulating data and template of
             page: <i><b>declarative</b></i> and <i><b>imperative</b></i></p>
         <p>When we speak about declarative method, that means you just need to <b><i>declare</i></b> instructions for
@@ -56,6 +65,10 @@ import { Inject, Input, RouterService, uwuController } from "../core";
     }
             </code>
         </pre>
+    </article>
+    <article class="examples">
+        <h2 id="about">Examples</h2>
+
         <p>Example of using Tsx component in common component</p>
         <fancy-button></fancy-button>
         
@@ -69,7 +82,8 @@ import { Inject, Input, RouterService, uwuController } from "../core";
         <button (click)="this.changeColor()">Change color</button>
         <div class="box" [uClass]="this.dynamic_classes">
     </article>
-            </div>
+    <hr>
+        </div>
         </main>
     `,
 })

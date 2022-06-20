@@ -1,6 +1,6 @@
 import { container } from 'tsyringe';
 import { AppService } from './app.service';
-import { uwuController, uwuModule, Inject, RouterService } from './core';
+import { uwuController, uwuModule, Inject, RouterService } from 'uwu-framework/core';
 
 @uwuController({
     selector: 'app',

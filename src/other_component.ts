@@ -1,4 +1,4 @@
-import { uwuController } from './core';
+import { uwuController } from 'uwu-framework/core';
 
 @uwuController({
     selector: "some",
